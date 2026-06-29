@@ -1,0 +1,4 @@
+repository "primeiro teste pro jogo/primeiro teste pro jogo@4674185468326@cloud"
+  path "/"
+    br "/main"
+    co "/main"
