@@ -56,12 +56,20 @@ public class AtiraBatataEstilingue : MonoBehaviour, IMunicaoEstilingue
 public class ControladorEstilingue : MonoBehaviour
 {
     private IMunicaoEstilingue tipoMunicao;
+    private scriptDeAndar jogador;
     
     [Header("Ponto de Saída do Projétil")]
     public Transform pontoDeDisparo; // Se nulo, usa a posição do próprio estilingue
 
     void Start()
     {
+        // Encontra a referência do jogador para checar se o estilingue está equipado
+        jogador = GetComponentInParent<scriptDeAndar>();
+        if (jogador == null)
+        {
+            jogador = FindFirstObjectByType<scriptDeAndar>();
+        }
+
         // Começa com o disparo de Pedra por padrão
         MudarMunicao<AtiraPedraEstilingue>();
         
@@ -73,8 +81,14 @@ public class ControladorEstilingue : MonoBehaviour
 
     void Update()
     {
-        // Atirar com Botão Esquerdo do Mouse ou Tecla Espaço
-        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
+        // Só atira se o jogador possuir e estiver com o estilingue equipado
+        if (jogador != null && (!jogador.possuiEstilingue || !jogador.estilingueEquipado))
+        {
+            return;
+        }
+
+        // Atirar apenas com o Botão Esquerdo do Mouse (evita conflito com o pulo na barra de Espaço)
+        if (Input.GetMouseButtonDown(0))
         {
             Atirar();
         }

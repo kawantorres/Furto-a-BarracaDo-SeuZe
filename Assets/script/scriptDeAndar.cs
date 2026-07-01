@@ -229,6 +229,13 @@ public class scriptDeAndar : MonoBehaviour
         if (estilingueNaMao != null)
         {
             estilingueNaMao.SetActive(estilingueEquipado);
+
+            // Garante que o ControladorEstilingue esteja presente no estilingue da mão ao equipar
+            if (estilingueEquipado && estilingueNaMao.GetComponent<ControladorEstilingue>() == null)
+            {
+                estilingueNaMao.AddComponent<ControladorEstilingue>();
+                Debug.Log("ControladorEstilingue adicionado automaticamente ao estilingue na mão.");
+            }
         }
         else
         {
