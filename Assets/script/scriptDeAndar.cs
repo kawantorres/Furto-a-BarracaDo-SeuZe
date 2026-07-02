@@ -24,6 +24,17 @@ public class scriptDeAndar : MonoBehaviour
     public GameObject miraUI;          
     public float distanciaColetaEstilingue = 3f;
 
+    [Header("Configurações de Interação")]
+    public float distanciaInteracao = 8f; // Distância para subir no skate ou carrinho
+
+    [Header("Configurações do Carrinho de Rolimã")]
+    public float velocidadeCarrinho = 20f;
+    public float velocidadeRotacaoCarrinho = 80f;
+    public float offsetAlturaCarrinho = 0.1f;
+    public bool noCarrinho = false;
+    private scriptDoCarrinhoDeRolima carrinhoEquipado;
+    private float velocidadeAtualCarrinhoMovel = 0f;
+
     private CharacterController controller;
     private Vector3 velocidadeAtual;
     private bool noChao;
@@ -50,17 +61,31 @@ public class scriptDeAndar : MonoBehaviour
                 DescerDoSkate();
             }
         }
+        else if (noCarrinho)
+        {
+            MovimentoCarrinho();
+
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                DescerDoCarrinho();
+            }
+        }
         else
         {
             MovimentoNormal();
 
             if (Input.GetKeyDown(KeyCode.E))
             {
-                // Tenta coletar o estilingue primeiro. Se coletar, não sobe no skate neste frame.
+                // Tenta coletar o estilingue primeiro. Se coletar, não sobe no skate/carrinho neste frame.
                 bool coletou = TentarColetarEstilingue();
                 if (!coletou)
                 {
-                    TentarSubirNoSkate();
+                    // Tenta subir no skate. Se não conseguir, tenta subir no carrinho de rolimã.
+                    bool subiuNoSkate = TentarSubirNoSkate();
+                    if (!subiuNoSkate)
+                    {
+                        TentarSubirNoCarrinho();
+                    }
                 }
             }
         }
@@ -78,7 +103,8 @@ public class scriptDeAndar : MonoBehaviour
             }
         }
 
-        if (Input.GetButtonDown("Jump") && noChao)
+        // Pulo só é permitido se não estiver no skate nem no carrinho
+        if (Input.GetButtonDown("Jump") && noChao && !noSkate && !noCarrinho)
         {
             velocidadeAtual.y = Mathf.Sqrt(alturaPulo * -2f * gravidade);
         }
@@ -87,15 +113,17 @@ public class scriptDeAndar : MonoBehaviour
         controller.Move(velocidadeAtual * Time.deltaTime);
     }
 
-    void TentarSubirNoSkate()
+    bool TentarSubirNoSkate()
     {
         scriptDoSkate[] skates = FindObjectsByType<scriptDoSkate>();
         scriptDoSkate skateMaisProximo = null;
-        float menorDistancia = 5f;
+        float menorDistancia = distanciaInteracao;
 
+        Debug.Log("Encontrados " + skates.Length + " skates na cena.");
         foreach (scriptDoSkate skate in skates)
         {
             float distancia = Vector3.Distance(transform.position, skate.transform.position);
+            Debug.Log("Distância até o skate '" + skate.name + "': " + distancia + "m. (Limite: " + menorDistancia + "m)");
             if (distancia <= menorDistancia)
             {
                 menorDistancia = distancia;
@@ -106,7 +134,136 @@ public class scriptDeAndar : MonoBehaviour
         if (skateMaisProximo != null)
         {
             SubirNoSkate(skateMaisProximo);
+            return true;
         }
+        return false;
+    }
+
+    bool TentarSubirNoCarrinho()
+    {
+        scriptDoCarrinhoDeRolima[] carrinhos = FindObjectsByType<scriptDoCarrinhoDeRolima>();
+        scriptDoCarrinhoDeRolima carrinhoMaisProximo = null;
+        float menorDistancia = distanciaInteracao;
+
+        Debug.Log("Encontrados " + carrinhos.Length + " carrinhos de rolimã na cena.");
+        foreach (scriptDoCarrinhoDeRolima carrinho in carrinhos)
+        {
+            float distancia = Vector3.Distance(transform.position, carrinho.transform.position);
+            Debug.Log("Distância até o carrinho '" + carrinho.name + "': " + distancia + "m. (Limite: " + menorDistancia + "m)");
+            if (distancia <= menorDistancia)
+            {
+                menorDistancia = distancia;
+                carrinhoMaisProximo = carrinho;
+            }
+        }
+
+        if (carrinhoMaisProximo != null)
+        {
+            SubirNoCarrinho(carrinhoMaisProximo);
+            return true;
+        }
+        return false;
+    }
+
+    void SubirNoCarrinho(scriptDoCarrinhoDeRolima carrinho)
+    {
+        noCarrinho = true;
+        carrinhoEquipado = carrinho;
+        velocidadeAtualCarrinhoMovel = 0f;
+
+        Collider[] carrinhosCols = carrinho.GetComponentsInChildren<Collider>();
+        foreach (Collider col in carrinhosCols)
+        {
+            col.enabled = false;
+        }
+
+        Rigidbody rb = carrinho.GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+
+        controller.center = new Vector3(controller.center.x, controller.center.y + offsetAlturaCarrinho, controller.center.z);
+        if (modeloDoPersonagem != null)
+        {
+            rotacaoOriginalModelo = modeloDoPersonagem.localRotation;
+            // No rolimã o personagem fica de frente, então não precisa rotacionar 90 graus como no skate
+        }
+
+        carrinho.transform.SetParent(transform);
+        carrinho.transform.localPosition = new Vector3(0, -(controller.height / 2f) + (offsetAlturaCarrinho / 2f), 0);
+        carrinho.transform.localRotation = Quaternion.identity;
+    }
+
+    void DescerDoCarrinho()
+    {
+        noCarrinho = false;
+
+        if (carrinhoEquipado != null)
+        {
+            controller.center = new Vector3(controller.center.x, controller.center.y - offsetAlturaCarrinho, controller.center.z);
+
+            if (modeloDoPersonagem != null)
+            {
+                modeloDoPersonagem.localRotation = rotacaoOriginalModelo;
+            }
+
+            carrinhoEquipado.transform.SetParent(null);
+
+            Collider[] carrinhoCols = carrinhoEquipado.GetComponentsInChildren<Collider>();
+            foreach (Collider col in carrinhoCols)
+            {
+                col.enabled = true;
+            }
+
+            Rigidbody rb = carrinhoEquipado.GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = false;
+
+            carrinhoEquipado.transform.position = transform.position + transform.right * 1.5f;
+
+            Vector3 rot = carrinhoEquipado.transform.eulerAngles;
+            carrinhoEquipado.transform.eulerAngles = new Vector3(0, rot.y, 0);
+
+            carrinhoEquipado = null;
+        }
+    }
+
+    void MovimentoCarrinho()
+    {
+        float z = Input.GetAxis("Vertical"); // W/S
+        float x = Input.GetAxis("Horizontal"); // A/D
+
+        // Rotaciona o carrinho (e o jogador)
+        transform.Rotate(0, x * velocidadeRotacaoCarrinho * Time.deltaTime, 0);
+
+        // Detecta inclinação para baixo para acelerar com a gravidade
+        float inclinacao = Vector3.Dot(transform.forward, Vector3.up); // Negativo se descida, positivo se subida
+        float aceleracaoGravidade = 0f;
+
+        if (inclinacao < -0.05f) // Descendo
+        {
+            aceleracaoGravidade = -inclinacao * 15f; // Quanto mais inclinado, mais acelera
+        }
+
+        // Aceleração manual (W) ou freio (S)
+        if (z > 0)
+        {
+            velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, velocidadeCarrinho, 10f * Time.deltaTime);
+        }
+        else if (z < 0)
+        {
+            velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, 0f, 20f * Time.deltaTime); // Freio forte
+        }
+        else
+        {
+            velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, 0f, 2f * Time.deltaTime); // Desaceleração gradual
+        }
+
+        // Adiciona gravidade na descida
+        velocidadeAtualCarrinhoMovel += aceleracaoGravidade * Time.deltaTime;
+
+        // Limita a velocidade máxima
+        velocidadeAtualCarrinhoMovel = Mathf.Clamp(velocidadeAtualCarrinhoMovel, 0f, velocidadeCarrinho * 2f);
+
+        Vector3 movimento = transform.forward * velocidadeAtualCarrinhoMovel;
+        controller.Move(movimento * Time.deltaTime);
     }
 
     void MovimentoNormal()

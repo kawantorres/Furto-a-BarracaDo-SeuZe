@@ -38,12 +38,21 @@ public class CameraTerceiraPessoa : MonoBehaviour
             return;
         }
 
-        rotacaoX += Input.GetAxis("Mouse X") * sensibilidadeMouseX;
-        rotacaoY -= Input.GetAxis("Mouse Y") * sensibilidadeMouseY;
+        // Encontra o transform pai que tem o CharacterController (Player_Logica)
+        Transform rootTransform = alvo.GetComponentInParent<CharacterController>() != null 
+            ? alvo.GetComponentInParent<CharacterController>().transform 
+            : alvo;
 
+        // Rotaciona o personagem horizontalmente com o Mouse X
+        float entradaMouseX = Input.GetAxis("Mouse X") * sensibilidadeMouseX;
+        rootTransform.Rotate(0, entradaMouseX, 0);
+
+        // Rotaciona a câmera verticalmente com o Mouse Y
+        rotacaoY -= Input.GetAxis("Mouse Y") * sensibilidadeMouseY;
         rotacaoY = Mathf.Clamp(rotacaoY, anguloMinimo, anguloMaximo);
 
-        Quaternion rotacaoCamera = Quaternion.Euler(rotacaoY, rotacaoX, 0);
+        // Usa a rotação Y do personagem como a rotação horizontal da câmera
+        Quaternion rotacaoCamera = Quaternion.Euler(rotacaoY, rootTransform.eulerAngles.y, 0);
 
         Vector3 posicaoFoco = alvo.position + new Vector3(0, alturaDaCamera, 0);
 
