@@ -60,10 +60,10 @@ public class Perseguidor : MonoBehaviour
         }
 
         transform.position += direcao.normalized * velocidadePerseguicao * Time.deltaTime;
-
+/*
         if (distancia <= distanciaDeToque && vidaDoAlvo != null)
         {
             vidaDoAlvo.PerderVida();
-        }
+        }*/
     }
 }

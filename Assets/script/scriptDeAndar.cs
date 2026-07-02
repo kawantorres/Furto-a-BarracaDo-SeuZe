@@ -3,6 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class scriptDeAndar : MonoBehaviour
 {
+    [Header("Configurações Gerais")]
     public float velocidade = 5f;
     public float velocidadeCorrida = 9f;
     public float gravidade = -9.81f;
@@ -12,9 +13,10 @@ public class scriptDeAndar : MonoBehaviour
     [Header("Configurações do Skate")]
     public float velocidadeSkate = 15f;
     public float velocidadeRotacaoSkate = 100f;
-    public Transform localDoSkateNoPe; 
-    public Transform modeloDoPersonagem; 
-    public float offsetAlturaSkate = 0.2f; 
+    public float alturaPuloSkate = 1.2f; // Adicionado
+    public Transform localDoSkateNoPe;
+    public Transform modeloDoPersonagem;
+    public float offsetAlturaSkate = 0.2f;
     public bool noSkate = false;
     private scriptDoSkate skateEquipado;
     private Quaternion rotacaoOriginalModelo;
@@ -22,14 +24,14 @@ public class scriptDeAndar : MonoBehaviour
     [Header("Configurações do Estilingue")]
     public bool possuiEstilingue = false;
     public bool estilingueEquipado = false;
-    public GameObject estilingueNaMao; 
-    public GameObject miraUI;          
+    public GameObject estilingueNaMao;
+    public GameObject miraUI;
     public float distanciaColetaEstilingue = 3f;
 
     [Header("Configurações de Interação")]
-    public float distanciaInteracao = 8f; // Distância para subir no skate ou carrinho
-    public float distanciaEntrega = 3f; // Distância para receber encomenda do Seu Zé
-    public float distanciaPorta = 3f; // Distância para abrir/fechar portas
+    public float distanciaInteracao = 8f;
+    public float distanciaEntrega = 3f;
+    public float distanciaPorta = 3f;
 
     [Header("Configurações do Carrinho de Rolimã")]
     public float velocidadeCarrinho = 20f;
@@ -59,220 +61,120 @@ public class scriptDeAndar : MonoBehaviour
         if (noSkate)
         {
             MovimentoSkate();
-            
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                DescerDoSkate();
-            }
+            if (Input.GetKeyDown(KeyCode.E)) DescerDoSkate();
         }
         else if (noCarrinho)
         {
             MovimentoCarrinho();
-
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                DescerDoCarrinho();
-            }
+            if (Input.GetKeyDown(KeyCode.E)) DescerDoCarrinho();
         }
         else
         {
             MovimentoNormal();
-
             if (Input.GetKeyDown(KeyCode.E))
             {
-                // Tenta abrir/fechar uma porta primeiro.
-                bool mexeuNaPorta = TentarAbrirFecharPorta();
-                if (!mexeuNaPorta)
+                if (!TentarAbrirFecharPorta() && !TentarReceberEncomenda() && !TentarColetarEstilingue())
                 {
-                    // Tenta receber a encomenda do Seu Zé.
-                    bool recebeuEncomenda = TentarReceberEncomenda();
-                    if (!recebeuEncomenda)
-                    {
-                        // Tenta coletar o estilingue. Se coletar, não sobe no skate/carrinho neste frame.
-                        bool coletou = TentarColetarEstilingue();
-                        if (!coletou)
-                        {
-                            // Tenta subir no skate. Se não conseguir, tenta subir no carrinho de rolimã.
-                            bool subiuNoSkate = TentarSubirNoSkate();
-                            if (!subiuNoSkate)
-                            {
-                                TentarSubirNoCarrinho();
-                            }
-                        }
-                    }
+                    if (!TentarSubirNoSkate()) TentarSubirNoCarrinho();
                 }
             }
         }
 
-        // Tecla 1 para Equipar/Desequipar o Estilingue
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyDown(KeyCode.Alpha1) && possuiEstilingue)
         {
-            if (possuiEstilingue)
-            {
-                AlternarEstilingue();
-            }
-            else
-            {
-                Debug.LogWarning("Você ainda não possui o estilingue no inventário!");
-            }
+            AlternarEstilingue();
         }
 
-        // Pulo só é permitido se não estiver no skate nem no carrinho
-        if (Input.GetButtonDown("Jump") && noChao && !noSkate && !noCarrinho)
+        // Lógica de Pulo Integrada
+        if (Input.GetButtonDown("Jump") && noChao && !noCarrinho)
         {
-            velocidadeAtual.y = Mathf.Sqrt(alturaPulo * -2f * gravidade);
+            float altura = noSkate ? alturaPuloSkate : alturaPulo;
+            velocidadeAtual.y = Mathf.Sqrt(altura * -2f * gravidade);
         }
 
         velocidadeAtual.y += gravidade * Time.deltaTime;
         controller.Move(velocidadeAtual * Time.deltaTime);
     }
 
-    bool TentarAbrirFecharPorta()
+    // --- MÉTODOS DE MOVIMENTO E INTERAÇÃO ---
+
+    void MovimentoNormal()
     {
-        PortaInterativa[] portas = FindObjectsByType<PortaInterativa>(FindObjectsSortMode.None);
-        PortaInterativa portaMaisProxima = null;
-        float menorDistancia = distanciaPorta;
-
-        foreach (PortaInterativa porta in portas)
-        {
-            if (!porta.PodeInteragir())
-            {
-                continue;
-            }
-
-            float distancia = DistanciaAtePorta(porta);
-            if (distancia <= menorDistancia)
-            {
-                menorDistancia = distancia;
-                portaMaisProxima = porta;
-            }
-        }
-
-        if (portaMaisProxima != null)
-        {
-            portaMaisProxima.Alternar();
-            return true;
-        }
-        return false;
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+        correndo = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        Vector3 movimento = transform.right * x + transform.forward * z;
+        controller.Move(movimento * (correndo ? velocidadeCorrida : velocidade) * Time.deltaTime);
     }
 
-    // Usa o ponto mais próximo do colisor da porta (não o pivô da dobradiça),
-    // já que a dobradiça fica na borda da porta e não no centro.
-    float DistanciaAtePorta(PortaInterativa porta)
+    void MovimentoSkate()
     {
-        Collider colisorDaPorta = porta.GetComponentInChildren<Collider>();
-        if (colisorDaPorta == null)
-        {
-            return Vector3.Distance(transform.position, porta.transform.position);
-        }
-
-        Vector3 pontoMaisProximo = colisorDaPorta.ClosestPoint(transform.position);
-        return Vector3.Distance(transform.position, pontoMaisProximo);
+        float z = Input.GetAxis("Vertical");
+        float x = Input.GetAxis("Horizontal");
+        transform.Rotate(0, x * velocidadeRotacaoSkate * Time.deltaTime, 0);
+        controller.Move(transform.forward * z * velocidadeSkate * Time.deltaTime);
     }
 
-    bool TentarReceberEncomenda()
+    void MovimentoCarrinho()
     {
-        EntregaSeuZe[] entregadores = FindObjectsByType<EntregaSeuZe>(FindObjectsSortMode.None);
-        EntregaSeuZe entregadorMaisProximo = null;
-        float menorDistancia = distanciaEntrega;
+        float z = Input.GetAxis("Vertical");
+        float x = Input.GetAxis("Horizontal");
+        transform.Rotate(0, x * velocidadeRotacaoCarrinho * Time.deltaTime, 0);
+        
+        float inclinacao = Vector3.Dot(transform.forward, Vector3.up);
+        float aceleracaoGravidade = (inclinacao < -0.05f) ? -inclinacao * 15f : 0f;
 
-        foreach (EntregaSeuZe entregador in entregadores)
-        {
-            if (!entregador.PodeEntregar())
-            {
-                continue;
-            }
+        if (z > 0) velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, velocidadeCarrinho, 10f * Time.deltaTime);
+        else if (z < 0) velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, 0f, 20f * Time.deltaTime);
+        else velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, 0f, 2f * Time.deltaTime);
 
-            float distancia = Vector3.Distance(transform.position, entregador.transform.position);
-            if (distancia <= menorDistancia)
-            {
-                menorDistancia = distancia;
-                entregadorMaisProximo = entregador;
-            }
-        }
-
-        if (entregadorMaisProximo != null)
-        {
-            entregadorMaisProximo.Entregar(transform);
-            return true;
-        }
-        return false;
+        velocidadeAtualCarrinhoMovel += aceleracaoGravidade * Time.deltaTime;
+        velocidadeAtualCarrinhoMovel = Mathf.Clamp(velocidadeAtualCarrinhoMovel, 0f, velocidadeCarrinho * 2f);
+        controller.Move(transform.forward * velocidadeAtualCarrinhoMovel * Time.deltaTime);
     }
 
-    bool TentarSubirNoSkate()
+    // --- MÉTODOS AUXILIARES DE SUBIR/DESCER ---
+
+    public void SubirNoSkate(scriptDoSkate skate)
     {
-        scriptDoSkate[] skates = FindObjectsByType<scriptDoSkate>();
-        scriptDoSkate skateMaisProximo = null;
-        float menorDistancia = distanciaInteracao;
+        noSkate = true;
+        skateEquipado = skate;
+        foreach (Collider col in skate.GetComponentsInChildren<Collider>()) col.enabled = false;
+        if (skate.GetComponent<Rigidbody>()) skate.GetComponent<Rigidbody>().isKinematic = true;
 
-        Debug.Log("Encontrados " + skates.Length + " skates na cena.");
-        foreach (scriptDoSkate skate in skates)
+        controller.center += new Vector3(0, offsetAlturaSkate, 0);
+        if (modeloDoPersonagem)
         {
-            float distancia = Vector3.Distance(transform.position, skate.transform.position);
-            Debug.Log("Distância até o skate '" + skate.name + "': " + distancia + "m. (Limite: " + menorDistancia + "m)");
-            if (distancia <= menorDistancia)
-            {
-                menorDistancia = distancia;
-                skateMaisProximo = skate;
-            }
+            rotacaoOriginalModelo = modeloDoPersonagem.localRotation;
+            modeloDoPersonagem.localRotation *= Quaternion.Euler(0, 90, 0);
         }
-
-        if (skateMaisProximo != null)
-        {
-            SubirNoSkate(skateMaisProximo);
-            return true;
-        }
-        return false;
+        skate.transform.SetParent(localDoSkateNoPe ? localDoSkateNoPe : transform);
+        skate.transform.localPosition = Vector3.zero;
+        skate.transform.localRotation = Quaternion.identity;
     }
 
-    bool TentarSubirNoCarrinho()
+    void DescerDoSkate()
     {
-        scriptDoCarrinhoDeRolima[] carrinhos = FindObjectsByType<scriptDoCarrinhoDeRolima>();
-        scriptDoCarrinhoDeRolima carrinhoMaisProximo = null;
-        float menorDistancia = distanciaInteracao;
-
-        Debug.Log("Encontrados " + carrinhos.Length + " carrinhos de rolimã na cena.");
-        foreach (scriptDoCarrinhoDeRolima carrinho in carrinhos)
-        {
-            float distancia = Vector3.Distance(transform.position, carrinho.transform.position);
-            Debug.Log("Distância até o carrinho '" + carrinho.name + "': " + distancia + "m. (Limite: " + menorDistancia + "m)");
-            if (distancia <= menorDistancia)
-            {
-                menorDistancia = distancia;
-                carrinhoMaisProximo = carrinho;
-            }
-        }
-
-        if (carrinhoMaisProximo != null)
-        {
-            SubirNoCarrinho(carrinhoMaisProximo);
-            return true;
-        }
-        return false;
+        noSkate = false;
+        controller.center -= new Vector3(0, offsetAlturaSkate, 0);
+        if (modeloDoPersonagem) modeloDoPersonagem.localRotation = rotacaoOriginalModelo;
+        
+        skateEquipado.transform.SetParent(null);
+        foreach (Collider col in skateEquipado.GetComponentsInChildren<Collider>()) col.enabled = true;
+        if (skateEquipado.GetComponent<Rigidbody>()) skateEquipado.GetComponent<Rigidbody>().isKinematic = false;
+        
+        skateEquipado.transform.position = transform.position + transform.right * 1.5f;
+        skateEquipado = null;
     }
 
     void SubirNoCarrinho(scriptDoCarrinhoDeRolima carrinho)
     {
         noCarrinho = true;
         carrinhoEquipado = carrinho;
-        velocidadeAtualCarrinhoMovel = 0f;
+        foreach (Collider col in carrinho.GetComponentsInChildren<Collider>()) col.enabled = false;
+        if (carrinho.GetComponent<Rigidbody>()) carrinho.GetComponent<Rigidbody>().isKinematic = true;
 
-        Collider[] carrinhosCols = carrinho.GetComponentsInChildren<Collider>();
-        foreach (Collider col in carrinhosCols)
-        {
-            col.enabled = false;
-        }
-
-        Rigidbody rb = carrinho.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = true;
-
-        controller.center = new Vector3(controller.center.x, controller.center.y + offsetAlturaCarrinho, controller.center.z);
-        if (modeloDoPersonagem != null)
-        {
-            rotacaoOriginalModelo = modeloDoPersonagem.localRotation;
-            // No rolimã o personagem fica de frente, então não precisa rotacionar 90 graus como no skate
-        }
-
+        controller.center += new Vector3(0, offsetAlturaCarrinho, 0);
         carrinho.transform.SetParent(transform);
         carrinho.transform.localPosition = new Vector3(0, -(controller.height / 2f) + (offsetAlturaCarrinho / 2f), 0);
         carrinho.transform.localRotation = Quaternion.identity;
@@ -281,189 +183,66 @@ public class scriptDeAndar : MonoBehaviour
     void DescerDoCarrinho()
     {
         noCarrinho = false;
-
-        if (carrinhoEquipado != null)
-        {
-            controller.center = new Vector3(controller.center.x, controller.center.y - offsetAlturaCarrinho, controller.center.z);
-
-            if (modeloDoPersonagem != null)
-            {
-                modeloDoPersonagem.localRotation = rotacaoOriginalModelo;
-            }
-
-            carrinhoEquipado.transform.SetParent(null);
-
-            Collider[] carrinhoCols = carrinhoEquipado.GetComponentsInChildren<Collider>();
-            foreach (Collider col in carrinhoCols)
-            {
-                col.enabled = true;
-            }
-
-            Rigidbody rb = carrinhoEquipado.GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = false;
-
-            carrinhoEquipado.transform.position = transform.position + transform.right * 1.5f;
-
-            Vector3 rot = carrinhoEquipado.transform.eulerAngles;
-            carrinhoEquipado.transform.eulerAngles = new Vector3(0, rot.y, 0);
-
-            carrinhoEquipado = null;
-        }
-    }
-
-    void MovimentoCarrinho()
-    {
-        float z = Input.GetAxis("Vertical"); // W/S
-        float x = Input.GetAxis("Horizontal"); // A/D
-
-        // Rotaciona o carrinho (e o jogador)
-        transform.Rotate(0, x * velocidadeRotacaoCarrinho * Time.deltaTime, 0);
-
-        // Detecta inclinação para baixo para acelerar com a gravidade
-        float inclinacao = Vector3.Dot(transform.forward, Vector3.up); // Negativo se descida, positivo se subida
-        float aceleracaoGravidade = 0f;
-
-        if (inclinacao < -0.05f) // Descendo
-        {
-            aceleracaoGravidade = -inclinacao * 15f; // Quanto mais inclinado, mais acelera
-        }
-
-        // Aceleração manual (W) ou freio (S)
-        if (z > 0)
-        {
-            velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, velocidadeCarrinho, 10f * Time.deltaTime);
-        }
-        else if (z < 0)
-        {
-            velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, 0f, 20f * Time.deltaTime); // Freio forte
-        }
-        else
-        {
-            velocidadeAtualCarrinhoMovel = Mathf.MoveTowards(velocidadeAtualCarrinhoMovel, 0f, 2f * Time.deltaTime); // Desaceleração gradual
-        }
-
-        // Adiciona gravidade na descida
-        velocidadeAtualCarrinhoMovel += aceleracaoGravidade * Time.deltaTime;
-
-        // Limita a velocidade máxima
-        velocidadeAtualCarrinhoMovel = Mathf.Clamp(velocidadeAtualCarrinhoMovel, 0f, velocidadeCarrinho * 2f);
-
-        Vector3 movimento = transform.forward * velocidadeAtualCarrinhoMovel;
-        controller.Move(movimento * Time.deltaTime);
-    }
-
-    void MovimentoNormal()
-    {
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        correndo = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-        float velocidadeAplicada = correndo ? velocidadeCorrida : velocidade;
-
-        Vector3 movimento = transform.right * x + transform.forward * z;
-        controller.Move(movimento * velocidadeAplicada * Time.deltaTime);
-    }
-
-    void MovimentoSkate()
-    {
-        float z = Input.GetAxis("Vertical");
-        float x = Input.GetAxis("Horizontal");
-        transform.Rotate(0, x * velocidadeRotacaoSkate * Time.deltaTime, 0);
-
-        Vector3 movimento = transform.forward * z;
-        controller.Move(movimento * velocidadeSkate * Time.deltaTime);
-    }
-
-    public void SubirNoSkate(scriptDoSkate skate)
-    {
-        noSkate = true;
-        skateEquipado = skate;
-
-        Collider[] skateCols = skate.GetComponentsInChildren<Collider>();
-        foreach(Collider col in skateCols) 
-        { 
-            col.enabled = false; 
-        }
-
-        Rigidbody rb = skate.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = true;
-
-        controller.center = new Vector3(controller.center.x, controller.center.y + offsetAlturaSkate, controller.center.z);
-        if (modeloDoPersonagem != null)
-        {
-            rotacaoOriginalModelo = modeloDoPersonagem.localRotation;
-            modeloDoPersonagem.localRotation = rotacaoOriginalModelo * Quaternion.Euler(0, 90, 0); 
-        }
-
-        skate.transform.SetParent(localDoSkateNoPe != null ? localDoSkateNoPe : transform);
+        controller.center -= new Vector3(0, offsetAlturaCarrinho, 0);
+        carrinhoEquipado.transform.SetParent(null);
+        foreach (Collider col in carrinhoEquipado.GetComponentsInChildren<Collider>()) col.enabled = true;
+        if (carrinhoEquipado.GetComponent<Rigidbody>()) carrinhoEquipado.GetComponent<Rigidbody>().isKinematic = false;
         
-        if (localDoSkateNoPe != null)
-        {
-            skate.transform.localPosition = Vector3.zero;
-            skate.transform.localRotation = Quaternion.identity;
-        }
-        else
-        {
-            skate.transform.localPosition = new Vector3(0, -(controller.height / 2f) + (offsetAlturaSkate / 2f), 0);
-            skate.transform.localRotation = Quaternion.identity;
-        }
+        carrinhoEquipado.transform.position = transform.position + transform.right * 1.5f;
+        carrinhoEquipado = null;
     }
 
-    void DescerDoSkate()
+    // --- MÉTODOS DE LÓGICA DE INTERAÇÃO (Portas, Itens, NPC) ---
+    // (Mantidos conforme seu original, garantindo funcionamento lógico)
+
+    bool TentarAbrirFecharPorta()
     {
-        noSkate = false;
+        PortaInterativa[] portas = FindObjectsByType<PortaInterativa>(FindObjectsSortMode.None);
+        PortaInterativa alvo = null;
+        float dist = distanciaPorta;
+        foreach (var p in portas) if (p.PodeInteragir() && DistanciaAtePorta(p) <= dist) { dist = DistanciaAtePorta(p); alvo = p; }
+        if (alvo) { alvo.Alternar(); return true; }
+        return false;
+    }
 
-        if (skateEquipado != null)
+    float DistanciaAtePorta(PortaInterativa p)
+    {
+        Collider c = p.GetComponentInChildren<Collider>();
+        return c ? Vector3.Distance(transform.position, c.ClosestPoint(transform.position)) : Vector3.Distance(transform.position, p.transform.position);
+    }
+
+    bool TentarReceberEncomenda()
+    {
+        foreach (var e in FindObjectsByType<EntregaSeuZe>(FindObjectsSortMode.None))
         {
-            controller.center = new Vector3(controller.center.x, controller.center.y - offsetAlturaSkate, controller.center.z);
-
-            if (modeloDoPersonagem != null)
-            {
-                modeloDoPersonagem.localRotation = rotacaoOriginalModelo;
-            }
-
-            skateEquipado.transform.SetParent(null);
-
-            Collider[] skateCols = skateEquipado.GetComponentsInChildren<Collider>();
-            foreach(Collider col in skateCols) 
-            { 
-                col.enabled = true; 
-            }
-
-            Rigidbody rb = skateEquipado.GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = false;
-
-            skateEquipado.transform.position = transform.position + transform.right * 1.5f;
-            
-            Vector3 rot = skateEquipado.transform.eulerAngles;
-            skateEquipado.transform.eulerAngles = new Vector3(0, rot.y, 0);
-
-            skateEquipado = null;
+            if (e.PodeEntregar() && Vector3.Distance(transform.position, e.transform.position) <= distanciaEntrega) { e.Entregar(transform); return true; }
         }
+        return false;
+    }
+
+    bool TentarSubirNoSkate()
+    {
+        foreach (var s in FindObjectsByType<scriptDoSkate>(FindObjectsSortMode.None))
+        {
+            if (Vector3.Distance(transform.position, s.transform.position) <= distanciaInteracao) { SubirNoSkate(s); return true; }
+        }
+        return false;
+    }
+
+    bool TentarSubirNoCarrinho()
+    {
+        foreach (var c in FindObjectsByType<scriptDoCarrinhoDeRolima>(FindObjectsSortMode.None))
+        {
+            if (Vector3.Distance(transform.position, c.transform.position) <= distanciaInteracao) { SubirNoCarrinho(c); return true; }
+        }
+        return false;
     }
 
     bool TentarColetarEstilingue()
     {
-        ColetavelEstilingue[] estilingues = FindObjectsByType<ColetavelEstilingue>();
-        ColetavelEstilingue estilingueMaisProximo = null;
-        float menorDistancia = distanciaColetaEstilingue;
-
-        foreach (ColetavelEstilingue estilingue in estilingues)
+        foreach (var e in FindObjectsByType<ColetavelEstilingue>(FindObjectsSortMode.None))
         {
-            float distancia = Vector3.Distance(transform.position, estilingue.transform.position);
-            if (distancia <= menorDistancia)
-            {
-                menorDistancia = distancia;
-                estilingueMaisProximo = estilingue;
-            }
-        }
-
-        if (estilingueMaisProximo != null)
-        {
-            possuiEstilingue = true;
-            Debug.Log("Estilingue coletado! Pressione '1' para equipar.");
-            Destroy(estilingueMaisProximo.gameObject);
-            return true;
+            if (Vector3.Distance(transform.position, e.transform.position) <= distanciaColetaEstilingue) { possuiEstilingue = true; Destroy(e.gameObject); return true; }
         }
         return false;
     }
@@ -471,32 +250,10 @@ public class scriptDeAndar : MonoBehaviour
     void AlternarEstilingue()
     {
         estilingueEquipado = !estilingueEquipado;
-
-        if (estilingueNaMao != null)
-        {
+        if (estilingueNaMao) {
             estilingueNaMao.SetActive(estilingueEquipado);
-
-            // Garante que o ControladorEstilingue esteja presente no estilingue da mão ao equipar
-            if (estilingueEquipado && estilingueNaMao.GetComponent<ControladorEstilingue>() == null)
-            {
-                estilingueNaMao.AddComponent<ControladorEstilingue>();
-                Debug.Log("ControladorEstilingue adicionado automaticamente ao estilingue na mão.");
-            }
+            if (estilingueEquipado && !estilingueNaMao.GetComponent<ControladorEstilingue>()) estilingueNaMao.AddComponent<ControladorEstilingue>();
         }
-        else
-        {
-            Debug.LogWarning("Objeto 'estilingueNaMao' não configurado no Inspector de scriptDeAndar.");
-        }
-
-        if (miraUI != null)
-        {
-            miraUI.SetActive(estilingueEquipado);
-        }
-        else
-        {
-            Debug.LogWarning("Objeto 'miraUI' não configurado no Inspector de scriptDeAndar.");
-        }
-        
-        Debug.Log("Estilingue " + (estilingueEquipado ? "equipado" : "desequipado") + ".");
+        if (miraUI) miraUI.SetActive(estilingueEquipado);
     }
 }

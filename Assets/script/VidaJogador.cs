@@ -4,9 +4,9 @@ using UnityEngine;
 public class VidaJogador : MonoBehaviour
 {
     [Header("Configuração de Vida")]
-    public int vidaMaxima = 3;
+    public int vidaMaxima = 10;
     public int vidaAtual;
-    public float duracaoInvulneravel = 1f;
+    public float duracaoInvulneravel = 0f;
 
     private bool invulneravel = false;
 

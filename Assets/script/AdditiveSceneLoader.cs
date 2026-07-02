@@ -7,9 +7,9 @@ public class AdditiveSceneLoader : MonoBehaviour
 
     private void Start()
     {
-        if (!SceneManager.GetSceneByName(sceneToLoad).isLoaded)
-        {
-            SceneManager.LoadScene(sceneToLoad, LoadSceneMode.Additive);
-        }
+        
+    if (!SceneManager.GetSceneByName("nome_da_cena").isLoaded) {
+        SceneManager.LoadScene("nome_da_cena", LoadSceneMode.Additive);
+    }
     }
 }
