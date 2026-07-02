@@ -26,6 +26,8 @@ public class scriptDeAndar : MonoBehaviour
 
     [Header("Configurações de Interação")]
     public float distanciaInteracao = 8f; // Distância para subir no skate ou carrinho
+    public float distanciaEntrega = 3f; // Distância para receber encomenda do Seu Zé
+    public float distanciaPorta = 3f; // Distância para abrir/fechar portas
 
     [Header("Configurações do Carrinho de Rolimã")]
     public float velocidadeCarrinho = 20f;
@@ -76,15 +78,25 @@ public class scriptDeAndar : MonoBehaviour
 
             if (Input.GetKeyDown(KeyCode.E))
             {
-                // Tenta coletar o estilingue primeiro. Se coletar, não sobe no skate/carrinho neste frame.
-                bool coletou = TentarColetarEstilingue();
-                if (!coletou)
+                // Tenta abrir/fechar uma porta primeiro.
+                bool mexeuNaPorta = TentarAbrirFecharPorta();
+                if (!mexeuNaPorta)
                 {
-                    // Tenta subir no skate. Se não conseguir, tenta subir no carrinho de rolimã.
-                    bool subiuNoSkate = TentarSubirNoSkate();
-                    if (!subiuNoSkate)
+                    // Tenta receber a encomenda do Seu Zé.
+                    bool recebeuEncomenda = TentarReceberEncomenda();
+                    if (!recebeuEncomenda)
                     {
-                        TentarSubirNoCarrinho();
+                        // Tenta coletar o estilingue. Se coletar, não sobe no skate/carrinho neste frame.
+                        bool coletou = TentarColetarEstilingue();
+                        if (!coletou)
+                        {
+                            // Tenta subir no skate. Se não conseguir, tenta subir no carrinho de rolimã.
+                            bool subiuNoSkate = TentarSubirNoSkate();
+                            if (!subiuNoSkate)
+                            {
+                                TentarSubirNoCarrinho();
+                            }
+                        }
                     }
                 }
             }
@@ -111,6 +123,78 @@ public class scriptDeAndar : MonoBehaviour
 
         velocidadeAtual.y += gravidade * Time.deltaTime;
         controller.Move(velocidadeAtual * Time.deltaTime);
+    }
+
+    bool TentarAbrirFecharPorta()
+    {
+        PortaInterativa[] portas = FindObjectsByType<PortaInterativa>(FindObjectsSortMode.None);
+        PortaInterativa portaMaisProxima = null;
+        float menorDistancia = distanciaPorta;
+
+        foreach (PortaInterativa porta in portas)
+        {
+            if (!porta.PodeInteragir())
+            {
+                continue;
+            }
+
+            float distancia = DistanciaAtePorta(porta);
+            if (distancia <= menorDistancia)
+            {
+                menorDistancia = distancia;
+                portaMaisProxima = porta;
+            }
+        }
+
+        if (portaMaisProxima != null)
+        {
+            portaMaisProxima.Alternar();
+            return true;
+        }
+        return false;
+    }
+
+    // Usa o ponto mais próximo do colisor da porta (não o pivô da dobradiça),
+    // já que a dobradiça fica na borda da porta e não no centro.
+    float DistanciaAtePorta(PortaInterativa porta)
+    {
+        Collider colisorDaPorta = porta.GetComponentInChildren<Collider>();
+        if (colisorDaPorta == null)
+        {
+            return Vector3.Distance(transform.position, porta.transform.position);
+        }
+
+        Vector3 pontoMaisProximo = colisorDaPorta.ClosestPoint(transform.position);
+        return Vector3.Distance(transform.position, pontoMaisProximo);
+    }
+
+    bool TentarReceberEncomenda()
+    {
+        EntregaSeuZe[] entregadores = FindObjectsByType<EntregaSeuZe>(FindObjectsSortMode.None);
+        EntregaSeuZe entregadorMaisProximo = null;
+        float menorDistancia = distanciaEntrega;
+
+        foreach (EntregaSeuZe entregador in entregadores)
+        {
+            if (!entregador.PodeEntregar())
+            {
+                continue;
+            }
+
+            float distancia = Vector3.Distance(transform.position, entregador.transform.position);
+            if (distancia <= menorDistancia)
+            {
+                menorDistancia = distancia;
+                entregadorMaisProximo = entregador;
+            }
+        }
+
+        if (entregadorMaisProximo != null)
+        {
+            entregadorMaisProximo.Entregar(transform);
+            return true;
+        }
+        return false;
     }
 
     bool TentarSubirNoSkate()

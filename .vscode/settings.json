@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "primeiro-teste-pro-jogo.slnx",
+    "dotnet.defaultSolution": "Furto-a-BarracaDo-SeuZe.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }

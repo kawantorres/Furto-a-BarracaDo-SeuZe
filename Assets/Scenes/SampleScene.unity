@@ -161,7 +161,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9084458181851230346, guid: b4235d9df06b17d498218a340b679137, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 114
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9084458181851230346, guid: b4235d9df06b17d498218a340b679137, type: 3}
       propertyPath: m_LocalPosition.y
@@ -169,7 +169,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9084458181851230346, guid: b4235d9df06b17d498218a340b679137, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.58
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9084458181851230346, guid: b4235d9df06b17d498218a340b679137, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3151,7 +3151,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 432a6fca21f560c41b95c283571be401, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.4
+      value: 0.078999996
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 432a6fca21f560c41b95c283571be401, type: 3}
       propertyPath: m_LocalPosition.z
@@ -7233,6 +7233,51 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1697325873}
   m_SourcePrefab: {fileID: 100100000, guid: 34b291f4b4485ea47a9fc67ca103bdc5, type: 3}
+--- !u!1 &778584480
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 778584482}
+  - component: {fileID: 778584481}
+  m_Layer: 0
+  m_Name: SceneLoader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &778584481
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 778584480}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47d8dd235cef3dff59337e711c25e67d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AdditiveSceneLoader
+  sceneToLoad: CoffeeShopInteriorDAY
+--- !u!4 &778584482
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 778584480}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &795437498 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c69d8fe54c6bdd843afd06190f6e407a, type: 3}
@@ -10607,7 +10652,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf5501a57a69e8746adfe92185882784, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::scriptDeAndar
-  velocidade: 1
+  velocidade: 5.5
   gravidade: -9.81
   alturaPulo: 1.5
   velocidadeSkate: 15
@@ -10622,6 +10667,7 @@ MonoBehaviour:
   miraUI: {fileID: 0}
   distanciaColetaEstilingue: 3
   distanciaInteracao: 8
+  distanciaEntrega: 3
   velocidadeCarrinho: 20
   velocidadeRotacaoCarrinho: 80
   offsetAlturaCarrinho: 0.1
@@ -10633,7 +10679,7 @@ CharacterController:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1213213182}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2024180607}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -20450,6 +20496,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2013764398}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!134 &2024180607
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!1 &2051999788
 GameObject:
   m_ObjectHideFlags: 0
@@ -21660,7 +21719,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8762539598914357905, guid: c1d3259b1b00f2745934a591a64234a2, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 34.076527
+      value: 0.0024681091
       objectReference: {fileID: 0}
     - target: {fileID: 8762539598914357905, guid: c1d3259b1b00f2745934a591a64234a2, type: 3}
       propertyPath: m_LocalPosition.z
@@ -21736,3 +21795,4 @@ SceneRoots:
   - {fileID: 1480653683}
   - {fileID: 1434392218}
   - {fileID: 560915745}
+  - {fileID: 778584482}
