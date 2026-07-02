@@ -4,8 +4,10 @@ using UnityEngine;
 public class scriptDeAndar : MonoBehaviour
 {
     public float velocidade = 5f;
+    public float velocidadeCorrida = 9f;
     public float gravidade = -9.81f;
     public float alturaPulo = 1.5f;
+    public bool correndo = false;
 
     [Header("Configurações do Skate")]
     public float velocidadeSkate = 15f;
@@ -355,8 +357,11 @@ public class scriptDeAndar : MonoBehaviour
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
+        correndo = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        float velocidadeAplicada = correndo ? velocidadeCorrida : velocidade;
+
         Vector3 movimento = transform.right * x + transform.forward * z;
-        controller.Move(movimento * velocidade * Time.deltaTime);
+        controller.Move(movimento * velocidadeAplicada * Time.deltaTime);
     }
 
     void MovimentoSkate()

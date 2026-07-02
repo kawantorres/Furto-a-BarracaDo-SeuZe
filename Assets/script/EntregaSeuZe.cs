@@ -63,6 +63,12 @@ public class EntregaSeuZe : MonoBehaviour
         entregaEmAndamento = null;
 
         Debug.Log("Seu Zé entregou a encomenda para " + alvo.name + "!");
+
+        ContadorDeEntregas contador = FindFirstObjectByType<ContadorDeEntregas>();
+        if (contador != null)
+        {
+            contador.RegistrarEntrega();
+        }
     }
 
     private Transform EncontrarMao(Transform alvo)
